@@ -6478,6 +6478,16 @@ static bool _is_completable(CharType c) {
 	return !_is_symbol(c) || c == '"' || c == '\'';
 }
 
+static bool _is_escaped(int pos, String line) {
+	bool escaped = false;
+	pos--;
+	while (pos >= 0 && line[pos] == '\\') {
+		escaped = !escaped;
+		pos--;
+	}
+	return escaped;
+}
+
 void TextEdit::_update_completion_candidates() {
 
 	String l = text[cursor.line];
@@ -6491,12 +6501,20 @@ void TextEdit::_update_completion_candidates() {
 	int first_quote = -1;
 	int restore_quotes = -1;
 
+	char current_quote = '"';
+
 	int c = cofs - 1;
 	while (c >= 0) {
 		if (l[c] == '"' || l[c] == '\'') {
-			inquote = !inquote;
-			if (first_quote == -1)
+			if (!inquote) {
+				inquote = true;
+				current_quote = l[c];
+			} else if (l[c] == current_quote && !_is_escaped(c, l)) {
+				inquote = false;
+			}
+			if (first_quote == -1) {
 				first_quote = c;
+			} 
 			restore_quotes = 0;
 		} else if (restore_quotes == 0 && l[c] == '$') {
 			restore_quotes = 1;
